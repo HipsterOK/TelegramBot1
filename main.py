@@ -1,8 +1,9 @@
+import config
 import telebot
 from telebot import types
 import sqlite3
 
-bot = telebot.TeleBot('5611209525:AAGM7lOYw4jIKUV6p1Zll6n_sz9hvkQuv8U')
+bot = telebot.TeleBot(config.bot_update_token)
 conn = sqlite3.connect('db/database', check_same_thread=False)
 cursor = conn.cursor()
 
@@ -13,9 +14,9 @@ def to_fixed(num_obj, digits=0):
 
 def menu_buttons():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
-    item1 = types.KeyboardButton("/rashod")
-    item2 = types.KeyboardButton("/dohod")
-    item3 = types.KeyboardButton("/balance")
+    item1 = types.KeyboardButton("Новый расход")
+    item2 = types.KeyboardButton("Новый доход")
+    item3 = types.KeyboardButton("Баланс")
     markup.add(item3)
     markup.row(item1, item2)
     return markup
@@ -45,13 +46,25 @@ def start_message(message):
     db_table_val(user_id=us_id, user_name=us_name, user_surname=us_sname, username=username, balance=0)
 
 
-@bot.message_handler(commands=['balance'])
+@bot.message_handler(content_types="text")
+def get_text_message(message):
+    command = message.text
+    match str(command):
+        case "Баланс":
+            my_balance(message)
+        case "Новый расход":
+            new_rashod(message)
+        case "Новый доход":
+            new_dohod(message)
+        case _:
+            bot.send_message(message.chat.id, "Нет такой команды: "+command)
+
+
 def my_balance(message):
     summa = cursor.execute('SELECT balance from users WHERE user_id = ?', (message.chat.id,)).fetchone()[0]
     bot.send_message(message.chat.id, 'Текущий баланс:' + '\n' + to_fixed(summa, 2), reply_markup=menu_buttons())
 
 
-@bot.message_handler(commands=['dohod'])
 def new_dohod(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
     item1 = types.KeyboardButton("Отмена")
@@ -79,7 +92,6 @@ def get_summa_dohoda(message):
         conn.commit()
 
 
-@bot.message_handler(commands=['rashod'])
 def new_rashod(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
     item1 = types.KeyboardButton("Непредвиденные расходы")
